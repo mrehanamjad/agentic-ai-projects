@@ -9,6 +9,7 @@ from openai import AsyncOpenAI # Import the AsyncOpenAI class to interact with O
 from dotenv import load_dotenv, find_dotenv
 import os
 import chainlit as cl
+from openai.types.responses import ResponseTextDeltaEvent
 
 
 load_dotenv(find_dotenv())
@@ -57,19 +58,22 @@ async def handle_chat_start():
 async def main(message: cl.Message):
     history = cl.user_session.get("history")
 
+    msg = cl.Message(content="")
+    await msg.send()
+
     history.append({"role":"user","content":message.content})
 
-    # Without streaming
-    result = Runner.run_sync(
+    # With streaming
+    result = Runner.run_streamed(
+        agent,  # or we can also do as: starting_agent=agent,
         input= history,
         run_config=run_config,
-        starting_agent=agent
         )
 
+    async for event in result.stream_events():
+        if event.type == "raw_response_event" and isinstance(event.data, ResponseTextDeltaEvent):
+            await msg.stream_token(event.data.delta)
   
     history.append({"role":"assistant","content": result.final_output})
     cl.user_session.set("history",history)
-    # Send a response back to the user
-    await cl.Message(
-        content=result.final_output,
-    ).send()
+    

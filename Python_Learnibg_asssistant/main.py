@@ -1,5 +1,5 @@
 def main():
-    print("Hello from simplegrammarassistant-bot!")
+    print("Hello from python-learnibg-asssistant!")
 
 
 if __name__ == "__main__":
